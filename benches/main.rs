@@ -31,7 +31,7 @@ where
 impl<A> QuickSelectFilter<A>
 where
     A: Array,
-    A::Item: PartialOrd + Clone + ::std::fmt::Debug,
+    A::Item: PartialOrd + Clone + fmt::Debug,
 {
     pub fn new() -> Self {
         QuickSelectFilter {

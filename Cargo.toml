@@ -14,12 +14,15 @@ license = "MPL-2.0"
 name = "median"
 readme = "README.md"
 repository = "https://github.com/regexident/median"
-version = "0.1.0"
+version = "0.2.0"
+
+[dependencies]
+arrayvec = "0.4.7"
 
 [dev-dependencies]
 arraydeque = "0.4.2"
-rand = "0.4.2"
 noisy_float = "0.1.4"
+rand = "0.4.2"
 
 [features]
 default = ["std"]
