@@ -1,96 +1,14 @@
 //! An implementation of a stack-allocated, efficient O(n) median filter.
 
 use std::fmt;
+use std::ptr;
 
-use arrayvec::{Array, ArrayVec};
+use generic_array::{ArrayLength, GenericArray, ArrayBuilder};
 
-macro_rules! filter_def {
-    ($n:ident<$t:ident>: $w:expr) => {
-        /// An implementation of a median filter of fixed width with linear complexity.
-        #[derive(Clone, Debug)]
-        pub struct $n<T> {
-            inner: Filter<[ListNode<$t>; $w]>,
-        }
-
-        impl<T> $n<T>
-        where
-            T: Clone + PartialOrd,
-        {
-            /// Creates a new median filter with a given window size.
-            pub fn new() -> Self {
-                Self {
-                    inner: Filter::new(),
-                }
-            }
-
-            /// Returns the window size of the filter.
-            #[inline]
-            pub fn len(&self) -> usize {
-                self.inner.len()
-            }
-
-            /// Returns the filter buffer's current median value, panicking if empty.
-            #[inline]
-            pub fn median(&self) -> T {
-                self.inner.median()
-            }
-
-            /// Returns the filter buffer's current min value, panicking if empty.
-            #[inline]
-            pub fn min(&self) -> T {
-                self.inner.min()
-            }
-
-            /// Returns the filter buffer's current max value, panicking if empty.
-            #[inline]
-            pub fn max(&self) -> T {
-                self.inner.max()
-            }
-
-            /// Applies a median filter to the consumed value.
-            #[inline]
-            pub fn consume(&mut self, value: T) -> T {
-                self.inner.consume(value)
-            }
-        }
-    }
-}
-
-filter_def!(Filter1<T>: 1);
-filter_def!(Filter2<T>: 2);
-filter_def!(Filter3<T>: 3);
-filter_def!(Filter4<T>: 4);
-filter_def!(Filter5<T>: 5);
-filter_def!(Filter6<T>: 6);
-filter_def!(Filter7<T>: 7);
-filter_def!(Filter8<T>: 8);
-filter_def!(Filter9<T>: 9);
-filter_def!(Filter10<T>: 10);
-filter_def!(Filter11<T>: 11);
-filter_def!(Filter12<T>: 12);
-filter_def!(Filter13<T>: 13);
-filter_def!(Filter14<T>: 14);
-filter_def!(Filter15<T>: 15);
-filter_def!(Filter16<T>: 16);
-filter_def!(Filter17<T>: 17);
-filter_def!(Filter18<T>: 18);
-filter_def!(Filter19<T>: 19);
-filter_def!(Filter20<T>: 20);
-filter_def!(Filter21<T>: 21);
-filter_def!(Filter22<T>: 22);
-filter_def!(Filter23<T>: 23);
-filter_def!(Filter24<T>: 24);
-filter_def!(Filter25<T>: 25);
-filter_def!(Filter26<T>: 26);
-filter_def!(Filter27<T>: 27);
-filter_def!(Filter28<T>: 28);
-filter_def!(Filter29<T>: 29);
-filter_def!(Filter30<T>: 30);
-filter_def!(Filter31<T>: 31);
-filter_def!(Filter32<T>: 32);
-
+/// Implementation detail.
+/// (Once we have value generics we will hopefully be able to un-leak it.)
 #[derive(Clone, PartialEq, Eq)]
-struct ListNode<T> {
+pub struct ListNode<T> {
     value: Option<T>,
     previous: usize,
     next: usize,
@@ -105,18 +23,18 @@ where
     }
 }
 
-/// An implementation of a median filter with linear complexity.
+/// An implementation of a median filter of fixed width with linear complexity.
 ///
 /// While the common naïve implementation of a median filter
 /// has a worst-case complexity of `O(n^2)` (due to having to sort the sliding window)
 /// the use of a combination of linked list and ring buffer allows for
 /// a worst-case complexity of `O(n)`.
-struct Filter<A>
+pub struct Filter<T, N>
 where
-    A: Array,
+    N: ArrayLength<ListNode<T>>,
 {
     // Buffer of list nodes:
-    buffer: ArrayVec<A>,
+    buffer: GenericArray<ListNode<T>, N>,
     // Cursor into circular buffer of data:
     cursor: usize,
     // Cursor to beginning of circular list:
@@ -125,10 +43,10 @@ where
     median: usize,
 }
 
-impl<T, A> Clone for Filter<A>
+impl<T, N> Clone for Filter<T, N>
 where
     T: Clone,
-    A: Clone + Array<Item = ListNode<T>>,
+    N: ArrayLength<ListNode<T>>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -140,10 +58,10 @@ where
     }
 }
 
-impl<T, A> fmt::Debug for Filter<A>
+impl<T, N> fmt::Debug for Filter<T, N>
 where
     T: fmt::Debug,
-    A: fmt::Debug + Array<Item = ListNode<T>>,
+    N: ArrayLength<ListNode<T>>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Filter")
@@ -155,22 +73,30 @@ where
     }
 }
 
-impl<T, A> Filter<A>
+impl<T, N> Filter<T, N>
 where
     T: Clone + PartialOrd,
-    A: Clone + Array<Item = ListNode<T>>,
+    N: ArrayLength<ListNode<T>>,
 {
     /// Creates a new median filter with a given window size.
     pub fn new() -> Self {
-        let mut buffer = ArrayVec::new();
-        let size = buffer.capacity();
-        for i in 0..size {
-            buffer.push(ListNode {
-                value: None,
-                previous: (i + size - 1) % size,
-                next: (i + 1) % size,
-            });
-        }
+        let buffer = unsafe {
+            let mut builder = ArrayBuilder::new();
+            {
+                let size = N::to_usize();
+                let (mut iter, index) = builder.iter_position();
+                while let Some(destination) = iter.next() {
+                    let node = ListNode {
+                        value: None,
+                        previous: (*index + size - 1) % size,
+                        next: (*index + 1) % size,
+                    };
+                    ptr::write(destination, node);
+                    *index += 1;
+                }
+            }
+            builder.into_inner()
+        };
         Filter {
             buffer: buffer,
             cursor: 0,
@@ -244,7 +170,6 @@ where
     /// 8. **Return median value**.
     ///
     /// (_Based on Phil Ekstrom, Embedded Systems Programming, November 2000._)
-
     pub fn consume(&mut self, value: T) -> T {
         // If the current head is about to be overwritten
         // we need to make sure to have the head point to
@@ -409,9 +334,11 @@ where
 mod tests {
     use super::*;
 
+    use generic_array::typenum::*;
+
     macro_rules! test_filter {
-        ($size:expr, $input:expr, $output:expr) => {
-            let filter: Filter<[ListNode<_>; $size]> = Filter::new();
+        ($size:ident, $input:expr, $output:expr) => {
+            let filter: Filter<_, $size> = Filter::new();
             let output: Vec<_> = $input.iter().scan(filter, |filter, &input| {
                 Some(filter.consume(input))
             }).collect();
@@ -424,117 +351,117 @@ mod tests {
         let input = vec![10, 20, 30, 100, 30, 20, 10];
         let output = vec![10, 10, 20, 20, 30, 30, 20];
 
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn single_peak_5() {
         let input = vec![10, 20, 30, 100, 30, 20, 10];
         let output = vec![10, 10, 20, 20, 30, 30, 30];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn single_valley_4() {
         let input = vec![90, 80, 70, 10, 70, 80, 90];
         let output = vec![90, 80, 80, 70, 70, 70, 70];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn single_valley_5() {
         let input = vec![90, 80, 70, 10, 70, 80, 90];
         let output = vec![90, 80, 80, 70, 70, 70, 70];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn single_outlier_4() {
         let input = vec![10, 10, 10, 100, 10, 10, 10];
         let output = vec![10, 10, 10, 10, 10, 10, 10];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn single_outlier_5() {
         let input = vec![10, 10, 10, 100, 10, 10, 10];
         let output = vec![10, 10, 10, 10, 10, 10, 10];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn triple_outlier_4() {
         let input = vec![10, 10, 100, 100, 100, 10, 10];
         let output = vec![10, 10, 10, 10, 100, 100, 10];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn triple_outlier_5() {
         let input = vec![10, 10, 100, 100, 100, 10, 10];
         let output = vec![10, 10, 10, 10, 100, 100, 100];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn quintuple_outlier_4() {
         let input = vec![10, 100, 100, 100, 100, 100, 10];
         let output = vec![10, 10, 100, 100, 100, 100, 100];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn quintuple_outlier_5() {
         let input = vec![10, 100, 100, 100, 100, 100, 10];
         let output = vec![10, 10, 100, 100, 100, 100, 100];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn alternating_4() {
         let input = vec![10, 20, 10, 20, 10, 20, 10];
         let output = vec![10, 10, 10, 10, 10, 10, 10];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn alternating_5() {
         let input = vec![10, 20, 10, 20, 10, 20, 10];
         let output = vec![10, 10, 10, 10, 10, 20, 10];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn ascending_4() {
         let input = vec![10, 20, 30, 40, 50, 60, 70];
         let output = vec![10, 10, 20, 20, 30, 40, 50];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn ascending_5() {
         let input = vec![10, 20, 30, 40, 50, 60, 70];
         let output = vec![10, 10, 20, 20, 30, 40, 50];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn descending_4() {
         let input = vec![70, 60, 50, 40, 30, 20, 10];
         let output = vec![70, 60, 60, 50, 40, 30, 20];
-        test_filter!(4, input, output);
+        test_filter!(U4, input, output);
     }
 
     #[test]
     fn descending_5() {
         let input = vec![70, 60, 50, 40, 30, 20, 10];
         let output = vec![70, 60, 60, 50, 50, 40, 30];
-        test_filter!(5, input, output);
+        test_filter!(U5, input, output);
     }
 
     #[test]
     fn min_max_median() {
-        let mut filter = Filter5::new();
+        let mut filter: Filter<_, U5> = Filter::new();
         for input in vec![70, 50, 30, 10, 20, 40, 60] {
             filter.consume(input);
         }
