@@ -16,6 +16,10 @@ readme = "README.md"
 repository = "https://github.com/regexident/median"
 version = "0.2.0"
 
+[dependencies.missing_mpl]
+optional = true
+version = "~0.1"
+
 [dependencies]
 generic-array = "^0.11"
 
@@ -26,4 +30,5 @@ rand = "0.4.2"
 
 [features]
 default = ["std"]
+nightly = ["missing_mpl"]
 std = []
