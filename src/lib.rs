@@ -4,20 +4,14 @@
 
 //! An implementation of an efficient O(n) median filter.
 
+#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 #![cfg_attr(feature = "missing_mpl", feature(plugin))]
 #![cfg_attr(feature = "missing_mpl", plugin(missing_mpl))]
 #![cfg_attr(feature = "missing_mpl", deny(missing_mpl))]
-
 #![warn(missing_docs)]
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
-
-#[cfg(not(feature = "std"))]
-#[macro_use]
-extern crate std;
 
 extern crate generic_array;
 
@@ -26,4 +20,7 @@ pub mod heap;
 
 pub mod stack;
 
+#[cfg(feature = "std")]
 pub use heap::*;
+#[cfg(not(feature = "std"))]
+pub use stack::*;
