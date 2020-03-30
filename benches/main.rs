@@ -25,7 +25,7 @@ where
     A: Array,
 {
     buffer: ArrayDeque<A, Wrapping>,
-    aux_buffer: A,
+    aux_buffer: mem::MaybeUninit<A>,
 }
 
 impl<A> QuickSelectFilter<A>
@@ -34,9 +34,10 @@ where
     A::Item: PartialOrd + Clone + fmt::Debug,
 {
     pub fn new() -> Self {
+        let mut aux_buffer = mem::MaybeUninit::<A>::uninit();
         QuickSelectFilter {
             buffer: ArrayDeque::new(),
-            aux_buffer: unsafe { mem::uninitialized() },
+            aux_buffer,
         }
     }
 
@@ -45,7 +46,7 @@ where
         self.buffer.push_back(value);
         {
             let size = self.buffer.len();
-            let slice = &mut self.aux_buffer.as_mut_slice()[0..size];
+            let slice = &mut self.aux_buffer.assume_init().as_mut_slice()[0..size];
             for (index, item) in self.buffer.iter().enumerate() {
                 slice[index] = item.clone();
             }
@@ -75,7 +76,7 @@ where
         };
 
         let size = self.buffer.len();
-        let slice = &mut self.aux_buffer.as_mut_slice()[0..size];
+        let slice = &mut self.aux_buffer.assume_init().as_mut_slice()[0..size];
         if low == high {
             &slice[low]
         } else {
@@ -95,6 +96,16 @@ where
                 }
             }
         }
+    }
+}
+
+impl<A> Default for QuickSelectFilter<A>
+where
+    A: Array,
+    A::Item: PartialOrd + Clone + fmt::Debug,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 
