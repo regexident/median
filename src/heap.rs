@@ -55,7 +55,7 @@ where
             });
         }
         Filter {
-            buffer: buffer,
+            buffer,
             cursor: 0,
             head: 0,
             median: 0,
@@ -66,6 +66,12 @@ where
     #[inline]
     pub fn len(&self) -> usize {
         self.buffer.len()
+    }
+
+    /// Returns `true` if the filter has a length of `0`.
+    #[inline]
+    pub fn is_empty(&self) -> usize {
+        self.len()
     }
 
     /// Returns the filter buffer's current median value, panicking if empty.
@@ -179,7 +185,7 @@ where
     #[inline]
     fn should_insert(&self, value: &T, current: usize, index: usize) -> bool {
         if let Some(ref v) = self.buffer[current].value {
-            (index + 1 == self.len()) || !(v < value)
+            (index + 1 == self.len()) || (v >= value)
         } else {
             true
         }

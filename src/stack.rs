@@ -55,9 +55,9 @@ where
     fn clone(&self) -> Self {
         Self {
             buffer: self.buffer.clone(),
-            cursor: self.cursor.clone(),
-            head: self.head.clone(),
-            median: self.median.clone(),
+            cursor: self.cursor,
+            head: self.head,
+            median: self.median,
         }
     }
 }
@@ -88,8 +88,9 @@ where
             let mut builder = ArrayBuilder::new();
             {
                 let size = N::to_usize();
-                let (mut iter, index) = builder.iter_position();
-                while let Some(destination) = iter.next() {
+                let (iter, index) = builder.iter_position();
+                for destination in iter {
+                    // while let Some(destination) = iter.next() {
                     let node = ListNode {
                         value: None,
                         previous: (*index + size - 1) % size,
@@ -102,7 +103,7 @@ where
             builder.into_inner()
         };
         Filter {
-            buffer: buffer,
+            buffer,
             cursor: 0,
             head: 0,
             median: 0,
@@ -113,6 +114,12 @@ where
     #[inline]
     pub fn len(&self) -> usize {
         self.buffer.len()
+    }
+
+    /// Returns `true` if the filter has a length of `0`.
+    #[inline]
+    pub fn is_empty(&self) -> usize {
+        self.len()
     }
 
     /// Returns the filter buffer's current median value, panicking if empty.
@@ -225,7 +232,7 @@ where
     #[inline]
     fn should_insert(&self, value: &T, current: usize, index: usize) -> bool {
         if let Some(ref v) = self.buffer[current].value {
-            (index + 1 == self.len()) || !(v < value)
+            (index + 1 == self.len()) || (v >= value)
         } else {
             true
         }
@@ -345,6 +352,16 @@ where
     unsafe fn read_max(&self) -> T {
         let index = (self.cursor + self.len() - 1) % (self.len());
         self.buffer[index].value.clone().unwrap()
+    }
+}
+
+impl<T, N> Default for Filter<T, N>
+where
+    T: Clone + PartialOrd,
+    N: ArrayLength<ListNode<T>>,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 
