@@ -7,7 +7,7 @@
 use std::fmt;
 use std::ptr;
 
-use generic_array::{ArrayLength, GenericArray, ArrayBuilder};
+use generic_array::{ArrayBuilder, ArrayLength, GenericArray};
 
 /// Implementation detail.
 /// (Once we have value generics we will hopefully be able to un-leak it.)
@@ -178,31 +178,45 @@ where
         // If the current head is about to be overwritten
         // we need to make sure to have the head point to
         // the next node after the current head:
-        unsafe { self.move_head_forward(); }
+        unsafe {
+            self.move_head_forward();
+        }
 
         // Remove the node that is about to be overwritten
         // from the linked list:
-        unsafe { self.remove_node(); }
+        unsafe {
+            self.remove_node();
+        }
 
         // Initialize `self.median` pointing
         // to the first (smallest) node in the sorted list:
-        unsafe { self.initialize_median(); }
+        unsafe {
+            self.initialize_median();
+        }
 
         // Search for the insertion index in the linked list
         // in regards to `value` as the insertion index.
-        unsafe { self.insert_value(&value); }
+        unsafe {
+            self.insert_value(&value);
+        }
 
         // Update head to newly inserted node if
         // cursor's value <= head's value or head is empty:
-        unsafe { self.update_head(&value); }
+        unsafe {
+            self.update_head(&value);
+        }
 
         // If the filter has an even window size, then shift the median
         // back one slot, so that it points to the left one
         // of the middle pair of median values
-        unsafe { self.adjust_median_for_even_length(); }
+        unsafe {
+            self.adjust_median_for_even_length();
+        }
 
         // Increment and wrap data in pointer:
-        unsafe { self.increment_cursor(); }
+        unsafe {
+            self.increment_cursor();
+        }
 
         // Read node value from buffer at `self.medium`:
         unsafe { self.read_median() }
@@ -343,11 +357,12 @@ mod tests {
     macro_rules! test_filter {
         ($size:ident, $input:expr, $output:expr) => {
             let filter: Filter<_, $size> = Filter::new();
-            let output: Vec<_> = $input.iter().scan(filter, |filter, &input| {
-                Some(filter.consume(input))
-            }).collect();
+            let output: Vec<_> = $input
+                .iter()
+                .scan(filter, |filter, &input| Some(filter.consume(input)))
+                .collect();
             assert_eq!(output, $output);
-        }
+        };
     }
 
     #[test]

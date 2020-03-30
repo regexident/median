@@ -130,7 +130,7 @@ fn linked_list(b: &mut Bencher) {
 fn quick_select(b: &mut Bencher) {
     b.iter(|| {
         let mut rng = XorShiftRng::new_unseeded();
-        let mut filter: QuickSelectFilter<[_;FILTER_WIDTH]> = QuickSelectFilter::new();
+        let mut filter: QuickSelectFilter<[_; FILTER_WIDTH]> = QuickSelectFilter::new();
         for i in 0..ITERATIONS {
             let signal = (i as f32).sin();
             let noise = rng.gen::<f32>();
