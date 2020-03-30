@@ -15,7 +15,7 @@ use median::Filter as LinkedListFilter;
 extern crate arraydeque;
 use arraydeque::{Array, ArrayDeque, Wrapping};
 
-use std::mem;
+use std::{fmt, mem};
 
 const FILTER_WIDTH: usize = 20;
 const ITERATIONS: usize = 10_000;
