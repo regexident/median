@@ -1,6 +1,10 @@
-on: [pull_request]
+name: Rust
 
-name: Continuous integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   check:
@@ -27,9 +31,12 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+          components: rust-src
       - uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --release
+      - run: cargo test
 
   fmt:
     name: Rustfmt
