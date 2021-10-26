@@ -118,8 +118,8 @@ where
 
     /// Returns `true` if the filter has a length of `0`.
     #[inline]
-    pub fn is_empty(&self) -> usize {
-        self.len()
+    pub fn is_empty(&self) -> bool {
+        self.len() > 0
     }
 
     /// Returns the filter buffer's current median value, panicking if empty.
@@ -498,7 +498,7 @@ mod tests {
     #[test]
     fn min_max_median() {
         let mut filter: Filter<_, U5> = Filter::new();
-        for input in vec![70, 50, 30, 10, 20, 40, 60] {
+        for input in [70, 50, 30, 10, 20, 40, 60] {
             filter.consume(input);
         }
         assert_eq!(filter.min(), 10);
