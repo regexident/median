@@ -16,7 +16,7 @@ optional = true
 version = "~0.1"
 
 [dependencies]
-generic-array = "^0.14"
+arrayvec = { version = "0.7.2", default-features = false }
 
 [dev-dependencies]
 arraydeque = "0.4.2"
