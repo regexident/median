@@ -13,7 +13,7 @@
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 
-extern crate generic_array;
+extern crate arrayvec;
 
 #[cfg(feature = "std")]
 pub mod heap;
